@@ -16,6 +16,14 @@ class Users:
         return u
 
     @staticmethod
+    async def get_list(**fetcher):
+        q = models.User.query
+
+        if 'exclude_users' in fetcher:
+            q = q.where(~models.User.id.in_(fetcher['exclude_users']))
+        return await q.gino.all()
+
+    @staticmethod
     async def get_by_id(id):
         return await models.User.get(id)
 

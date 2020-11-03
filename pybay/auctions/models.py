@@ -14,9 +14,11 @@ class Auction(DB.Model):
     step_price = DB.Column('step_price', NUMERIC)
     current_price = DB.Column('current_price', NUMERIC)
     end_at = DB.Column('end_time', DB.DateTime(timezone=True))
+    winner_id = DB.Column('winner_id', UUID, DB.ForeignKey('users.id'), nullable=True)
     created_at = DB.Column('created_at', DB.DateTime(timezone=True))
 
     _user = None
+    _winner = None
 
     @property
     def user(self):
@@ -25,6 +27,14 @@ class Auction(DB.Model):
     @user.setter
     def user(self, value):
         self._user = value
+
+    @property
+    def winner(self):
+        return self._winner
+
+    @winner.setter
+    def winner(self, value):
+        self._winner = value
 
 
 class Bid(DB.Model):

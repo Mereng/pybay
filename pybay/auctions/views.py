@@ -2,7 +2,7 @@ import datetime
 from aiohttp import web
 
 from core import decorators, errors, tools
-from auctions import controllers
+from auctions import controllers, notify
 
 
 class Auctions(web.View):
@@ -61,6 +61,9 @@ class Auctions(web.View):
             data['step_price'],
             data['end_at'],
         )
+
+        notify.NewAuction(auction).send()
+
         return web.json_response({
             'id': str(auction.id),
             'user_id': str(auction.user_id),
@@ -125,7 +128,14 @@ class Auction(web.View):
 
         return web.json_response({
             'id': str(auction.id),
-            'user_id': str(auction.user_id),
+            'user': {
+                'id': str(auction.user.id),
+                'username': auction.user.username,
+            },
+            'winner': {
+                'id': str(auction.winner.id),
+                'username': auction.winner.username,
+            },
             'title': auction.title,
             'description': auction.description,
             'start_price': float(auction.start_price),
@@ -156,6 +166,8 @@ class Bids(web.View):
             bid = await controllers.Bids.create(auction, user_id)
         except controllers.AuctionPriceAlreadyChanged:
             raise errors.HTTP409('Price of auction changed, try again')
+
+        notify.NewBid(auction, bid).send()
 
         return web.json_response({
             'id': str(bid.id),

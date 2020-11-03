@@ -23,7 +23,15 @@ class Auctions:
 
     @staticmethod
     async def get_by_id(id) -> models.Auction:
-        return await models.Auction.get(id)
+        winner = users.models.User.alias()
+        return (
+            await models.Auction
+                .load(
+                    user=users.models.User.on(models.Auction.user_id == users.models.User.id),
+                    winner=winner.on(models.Auction.winner_id == winner.id)
+                )
+                .query.where(models.Auction.id == id).gino.first()
+        )
 
     @staticmethod
     async def get_list(**fetcher):
@@ -35,6 +43,11 @@ class Auctions:
             q = q.where(models.Auction.end_at > datetime.datetime.now())
         elif fetcher.get('active') is False:
             q = q.where(models.Auction.end_at <= datetime.datetime.now())
+
+        if fetcher.get('winner_exists') is True:
+            q = q.where(models.Auction.winner_id.isnot(None))
+        elif fetcher.get('winner_exists') is False:
+            q = q.where(models.Auction.winner_id.is_(None))
 
         if fetcher.get('limit') is not None:
             q = q.limit(fetcher['limit'])
@@ -67,7 +80,7 @@ class Bids:
                     .gino.first()  # type models.Auction
             )
             if tx_auction.current_price != auction.current_price:
-                tx.rollback()
+                await tx.rollback()
                 raise AuctionPriceAlreadyChanged(auction)
             bid = await models.Bid.create(
                 id=uuid.uuid4(),
@@ -76,7 +89,7 @@ class Bids:
                 created_at=datetime.datetime.now()
             )
             await auction.update(current_price=auction.current_price + auction.step_price).apply()
-            tx.commit()
+            await tx.raise_commit()
         return bid
 
 
