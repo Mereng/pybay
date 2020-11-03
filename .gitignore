@@ -2,3 +2,4 @@
 /var/
 /pybay/settings.yaml
 __pycache__/
+/venv/
